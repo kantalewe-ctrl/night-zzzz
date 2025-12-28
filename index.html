@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spesial Untukmu | KAA707</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Pacifico', cursive;
+            background: radial-gradient(circle at center, #2b001f 0%, #1a0014 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        /* Container Utama */
+        .container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Styling Teks Pesan */
+        .message-wrapper {
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
+        .text-msg {
+            font-size: 3.5rem;
+            color: #ffb7c5;
+            text-shadow: 0 0 15px rgba(255, 64, 129, 0.6);
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+            position: absolute;
+            transition: all 1.5s ease-in-out; 
+            white-space: nowrap;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .text-msg.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* --- FINAL HEART CONTAINER --- */
+        .final-heart-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            
+            /* Agar responsif dan tidak terpotong di HP */
+            width: 350px; 
+            height: 350px;
+            max-width: 80vw; /* Maksimal 80% lebar layar */
+            max-height: 80vw;
+            
+            opacity: 0;
+            transition: transform 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 1s ease;
+            z-index: 20;
+            
+            /* Penting: Memberi ruang untuk glow agar tidak terpotong */
+            padding: 20px; 
+        }
+
+        .final-heart-container.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* SVG Settings */
+        svg.heart-svg {
+            width: 100%;
+            height: 100%;
+            /* KUNCI AGAR TIDAK TERPOTONG: visible */
+            overflow: visible; 
+            animation: floating 3s ease-in-out infinite alternate;
+        }
+
+        /* --- LOGIKA ANIMASI JALUR (STROKE) --- */
+        /* Kita set panjang garis (dasharray) besar agar bisa dianimasikan */
+        .heart-path {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 1500; /* Panjang garis */
+            stroke-dashoffset: 1500; /* Disembunyikan dulu */
+        }
+
+        /* 1. LAYER DALAM (Isi Warna) */
+        .heart-fill {
+            fill: url(#gradientFill);
+            opacity: 0; /* Mulai transparan */
+            transform-origin: center;
+            filter: drop-shadow(0 0 15px rgba(255, 64, 129, 0.5));
+        }
+        
+        /* Saat muncul, isi hati fade-in pelan */
+        .final-heart-container.show .heart-fill {
+            animation: fillFadeIn 2s forwards 0.5s, heartbeat 1.5s infinite 4s;
+        }
+
+        /* 2. LAYER BINGKAI LUAR (Outer) */
+        .heart-stroke-outer {
+            stroke: #690020;
+            stroke-width: 15;
+            filter: blur(4px);
+            opacity: 0.6;
+        }
+        /* Muncul urutan ke-1 */
+        .final-heart-container.show .heart-stroke-outer {
+            animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.5s; 
+        }
+
+        /* 3. LAYER BINGKAI TENGAH (Middle - Neon) */
+        .heart-stroke-middle {
+            stroke: #ff0055;
+            stroke-width: 6;
+            filter: drop-shadow(0 0 8px #ff0055);
+        }
+        /* Muncul urutan ke-2 (Setelah Outer selesai) */
+        .final-heart-container.show .heart-stroke-middle {
+            animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards 2.5s, 
+                       colorShift 4s infinite alternate 4.5s;
+        }
+
+        /* 4. LAYER BINGKAI DALAM (Inner - Putih Tajam) */
+        .heart-stroke-inner {
+            stroke: #ffffff;
+            stroke-width: 2;
+            filter: drop-shadow(0 0 2px #fff);
+        }
+        /* Muncul urutan ke-3 (Terakhir) */
+        .final-heart-container.show .heart-stroke-inner {
+            animation: drawLine 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards 4.5s;
+        }
+
+        /* --- BACKGROUND & START SCREEN --- */
+        .bg-stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            animation: twinkle 3s infinite;
+        }
+
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease;
+            cursor: pointer;
+        }
+
+        .start-text {
+            font-size: 1.5rem;
+            color: #fff;
+            animation: pulseText 2s infinite;
+        }
+
+        /* --- KEYFRAMES --- */
+        
+        /* Animasi Menggambar Garis */
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Fade In Isi Hati */
+        @keyframes fillFadeIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.08); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.12); }
+            60% { transform: scale(1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-15px); }
+        }
+        
+        @keyframes colorShift {
+            0% { stroke: #ff0055; filter: drop-shadow(0 0 8px #ff0055); } 
+            50% { stroke: #ff9900; filter: drop-shadow(0 0 8px #ff9900); } 
+            100% { stroke: #00ccff; filter: drop-shadow(0 0 8px #00ccff); }
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Responsive Text */
+        @media (max-width: 768px) {
+            .text-msg { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <svg style="position: absolute; width: 0; height: 0;" width="0" height="0" version="1.1" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="gradientFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#ff4d88; stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#800033; stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <div class="start-screen" id="startScreen">
+        <div class="start-text">Klik layar...</div>
+    </div>
+
+    <div class="bg-stars" id="bgStars"></div>
+
+    <div class="container">
+        <div class="message-wrapper">
+            <div class="text-msg" id="msg1">Halo mbaksss❤️</div>
+            <div class="text-msg" id="msg2">Gud night y 🌙</div>
+            <div class="text-msg" id="msg3">sleep well💋</div>
+            <div class="text-msg" id="msg4">keep the spirit</div>
+            <div class="text-msg" id="msg4">hp terossssss</div>
+</div>
+
+        <div class="final-heart-container" id="finalHeart">
+            <svg class="heart-svg" viewBox="-20 -20 552 552">
+                <path class="heart-fill" d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z" />
+                
+                <path class="heart-path heart-stroke-outer" d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z" />
+                
+                <path class="heart-path heart-stroke-middle" d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z" />
+                
+                <path class="heart-path heart-stroke-inner" d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z" />
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        // --- LOGIKA BINTANG ---
+        const bgStars = document.getElementById('bgStars');
+        for(let i=0; i<40; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            // Variasi ukuran bintang
+            const size = Math.random() * 3 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.animationDelay = Math.random() * 2 + 's';
+            bgStars.appendChild(star);
+        }
+
+        // --- LOGIKA PESAN & TRANSISI ---
+        const startScreen = document.getElementById('startScreen');
+        const msgs = [
+            document.getElementById('msg1'),
+            document.getElementById('msg2'),
+            document.getElementById('msg3')
+        ];
+        const finalHeart = document.getElementById('finalHeart');
+        
+        let currentIndex = -1;
+        let animationInterval;
+
+        function nextMessage() {
+            // Hilangkan pesan sebelumnya
+            if (currentIndex >= 0 && currentIndex < msgs.length) {
+                msgs[currentIndex].classList.remove('active');
+            }
+
+            currentIndex++;
+
+            // Jika masih ada pesan, tampilkan
+            if (currentIndex < msgs.length) {
+                msgs[currentIndex].classList.add('active');
+            } 
+            // Jika pesan habis, masuk ke Mode Final Heart
+            else {
+                clearInterval(animationInterval); 
+                
+                // Pastikan semua teks bersih
+                msgs.forEach(msg => msg.classList.remove('active'));
+
+                // Delay sedikit sebelum hati muncul
+                setTimeout(() => {
+                    finalHeart.classList.add('show'); 
+                }, 500);
+            }
+        }
+
+        // Mulai saat layar diklik
+        document.body.addEventListener('click', function() {
+            if (startScreen.style.opacity !== '0') {
+                // Efek fade out start screen
+                startScreen.style.opacity = '0';
+                setTimeout(() => {
+                    startScreen.style.display = 'none';
+                    
+                    // Mainkan musik (Opsional jika ingin menambahkan audio nanti)
+                    
+                    // Tampilkan pesan pertama
+                    nextMessage();
+                    
+                    // Loop pesan setiap 3.5 detik
+                    animationInterval = setInterval(nextMessage, 3500);
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
